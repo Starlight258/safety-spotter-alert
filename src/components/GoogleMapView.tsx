@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Loader } from '@googlemaps/js-api-loader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { MapPin, Home, Heart } from 'lucide-react';
+import { MapPin, Home, Heart, Filter } from 'lucide-react';
 import { getLocationSettings } from '@/services/locationService';
 import type { Incident } from '@/types/incident';
 import type { MissingPerson } from '@/types/missing';
@@ -11,9 +11,10 @@ interface GoogleMapViewProps {
   incidents: Incident[];
   missingPersons?: MissingPerson[];
   currentPosition?: { lat: number; lng: number } | null;
+  activeFilter?: string;
 }
 
-const GoogleMapView = ({ incidents, missingPersons = [], currentPosition }: GoogleMapViewProps) => {
+const GoogleMapView = ({ incidents, missingPersons = [], currentPosition, activeFilter = 'all' }: GoogleMapViewProps) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [apiKey, setApiKey] = useState<string>('');
@@ -40,6 +41,19 @@ const GoogleMapView = ({ incidents, missingPersons = [], currentPosition }: Goog
       other: '⚠️'
     };
     return icons[type as keyof typeof icons] || '⚠️';
+  };
+
+  const getIncidentTypeLabel = (type: string) => {
+    const labels = {
+      crime: '범죄',
+      traffic: '교통사고',
+      fire: '화재',
+      flood: '침수',
+      subway: '지하철',
+      disaster: '재난',
+      other: '기타'
+    };
+    return labels[type as keyof typeof labels] || '기타';
   };
 
   const getMissingIcon = (age: number) => {
@@ -79,12 +93,12 @@ const GoogleMapView = ({ incidents, missingPersons = [], currentPosition }: Goog
       try {
         const google = await loader.load();
         
-        // 현재 위치 또는 서울 중심으로 지도 초기화
+        // 현재 위치 우선, 없으면 서울 중심
         const center = currentPosition || { lat: 37.5665, lng: 126.9780 };
         
         const mapInstance = new google.maps.Map(mapRef.current, {
           center: center,
-          zoom: currentPosition ? 15 : 13,
+          zoom: currentPosition ? 16 : 13, // 현재 위치가 있으면 더 확대
           mapTypeId: google.maps.MapTypeId.ROADMAP,
           styles: [
             {
@@ -137,9 +151,13 @@ const GoogleMapView = ({ incidents, missingPersons = [], currentPosition }: Goog
         );
         newMarkers.push(interestMarker);
       });
+
+    // 필터링된 사건 마커 추가
+    const filteredIncidents = activeFilter === 'all' 
+      ? incidents 
+      : incidents.filter(incident => incident.type === activeFilter);
     
-    // 사건 마커 추가
-    incidents.forEach((incident) => {
+    filteredIncidents.forEach((incident) => {
       if (incident.coordinates) {
         const marker = new google.maps.Marker({
           position: { 
@@ -147,57 +165,16 @@ const GoogleMapView = ({ incidents, missingPersons = [], currentPosition }: Goog
             lng: incident.coordinates.lng 
           },
           map: map,
-          title: `사건: ${incident.title}`,
+          title: `${getIncidentIcon(incident.type)} ${getIncidentTypeLabel(incident.type)}: ${incident.title}`,
           icon: {
             url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
-              <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="16" cy="16" r="14" fill="${getMarkerColor(incident.riskLevel)}" stroke="white" stroke-width="2"/>
-                <text x="16" y="20" text-anchor="middle" font-size="12" fill="white">${getIncidentIcon(incident.type)}</text>
+              <svg width="36" height="36" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="18" cy="18" r="16" fill="${getMarkerColor(incident.riskLevel)}" stroke="white" stroke-width="2"/>
+                <text x="18" y="23" text-anchor="middle" font-size="14" fill="white">${getIncidentIcon(incident.type)}</text>
               </svg>
             `)}`,
-            scaledSize: new google.maps.Size(32, 32),
-            anchor: new google.maps.Point(16, 16)
-          }
-        });
-
-        const infoWindow = new google.maps.InfoWindow({
-          content: `
-            <div style="max-width: 250px;">
-              <h3 style="margin: 0 0 8px 0; font-weight: bold;">${incident.title}</h3>
-              <p style="margin: 0 0 4px 0; color: #666;">${incident.location}</p>
-              <p style="margin: 0; font-size: 14px;">${incident.description}</p>
-              ${incident.aiSuggestion ? `<div style="margin-top: 8px; padding: 8px; background: #f0f9ff; border-radius: 4px; font-size: 13px;"><strong>AI 제안:</strong> ${incident.aiSuggestion}</div>` : ''}
-            </div>
-          `
-        });
-
-        marker.addListener('click', () => {
-          infoWindow.open(map, marker);
-        });
-
-        newMarkers.push(marker);
-      }
-    });
-
-    // 실종자 마커 추가
-    missingPersons.forEach((person) => {
-      if (person.coordinates) {
-        const marker = new google.maps.Marker({
-          position: { 
-            lat: person.coordinates.lat, 
-            lng: person.coordinates.lng 
-          },
-          map: map,
-          title: `실종: ${person.name}`,
-          icon: {
-            url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
-              <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="16" cy="16" r="14" fill="#f59e0b" stroke="white" stroke-width="2"/>
-                <text x="16" y="20" text-anchor="middle" font-size="12" fill="white">${getMissingIcon(person.age)}</text>
-              </svg>
-            `)}`,
-            scaledSize: new google.maps.Size(32, 32),
-            anchor: new google.maps.Point(16, 16)
+            scaledSize: new google.maps.Size(36, 36),
+            anchor: new google.maps.Point(18, 18)
           }
         });
 
@@ -206,14 +183,38 @@ const GoogleMapView = ({ incidents, missingPersons = [], currentPosition }: Goog
           return date.toLocaleDateString('ko-KR') + ' ' + date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
         };
 
+        const getRiskLevelText = (level: string) => {
+          const levels = {
+            critical: '매우 위험',
+            high: '위험',
+            medium: '주의',
+            low: '참고'
+          };
+          return levels[level as keyof typeof levels] || '알 수 없음';
+        };
+
         const infoWindow = new google.maps.InfoWindow({
           content: `
-            <div style="max-width: 250px;">
-              <h3 style="margin: 0 0 8px 0; font-weight: bold; color: #f59e0b;">실종 - ${person.name}</h3>
-              <p style="margin: 0 0 4px 0;"><strong>나이:</strong> ${person.age}세 (${person.gender === 'male' ? '남성' : '여성'})</p>
-              <p style="margin: 0 0 4px 0;"><strong>마지막 위치:</strong> ${person.lastLocation}</p>
-              <p style="margin: 0 0 4px 0;"><strong>실종 시간:</strong> ${formatTime(person.lastSeenTime)}</p>
-              ${person.description ? `<p style="margin: 0; font-size: 14px; color: #666;"><strong>특징:</strong> ${person.description}</p>` : ''}
+            <div style="max-width: 280px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                <span style="font-size: 20px;">${getIncidentIcon(incident.type)}</span>
+                <span style="background: ${getMarkerColor(incident.riskLevel)}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: bold;">
+                  ${getRiskLevelText(incident.riskLevel)}
+                </span>
+              </div>
+              <h3 style="margin: 0 0 8px 0; font-weight: bold; font-size: 16px; line-height: 1.3;">${incident.title}</h3>
+              <p style="margin: 0 0 6px 0; color: #666; font-size: 14px;">📍 ${incident.location}</p>
+              <p style="margin: 0 0 6px 0; color: #666; font-size: 12px;">🕐 ${formatTime(incident.timestamp)}</p>
+              <p style="margin: 0 0 8px 0; font-size: 14px; line-height: 1.4;">${incident.description}</p>
+              ${incident.reportCount ? `<p style="margin: 0 0 8px 0; color: #f59e0b; font-size: 13px; font-weight: bold;">📢 제보 ${incident.reportCount}건</p>` : ''}
+              ${incident.aiSuggestion ? `
+                <div style="margin-top: 8px; padding: 8px; background: #f0f9ff; border: 1px solid #bfdbfe; border-radius: 6px; font-size: 13px;">
+                  <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 4px;">
+                    <span style="color: #2563eb; font-weight: bold;">🤖 AI 제안</span>
+                  </div>
+                  <p style="margin: 0; color: #1e40af; line-height: 1.3;">${incident.aiSuggestion}</p>
+                </div>
+              ` : ''}
             </div>
           `
         });
@@ -226,8 +227,60 @@ const GoogleMapView = ({ incidents, missingPersons = [], currentPosition }: Goog
       }
     });
 
+    // 실종자 마커 추가 (필터가 'missing' 또는 'all'일 때만)
+    if (activeFilter === 'all' || activeFilter === 'missing') {
+      missingPersons.forEach((person) => {
+        if (person.coordinates) {
+          const marker = new google.maps.Marker({
+            position: { 
+              lat: person.coordinates.lat, 
+              lng: person.coordinates.lng 
+            },
+            map: map,
+            title: `실종: ${person.name}`,
+            icon: {
+              url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
+                <svg width="36" height="36" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="18" cy="18" r="16" fill="#f59e0b" stroke="white" stroke-width="2"/>
+                  <text x="18" y="23" text-anchor="middle" font-size="14" fill="white">${getMissingIcon(person.age)}</text>
+                </svg>
+              `)}`,
+              scaledSize: new google.maps.Size(36, 36),
+              anchor: new google.maps.Point(18, 18)
+            }
+          });
+
+          const formatTime = (timeString: string) => {
+            const date = new Date(timeString);
+            return date.toLocaleDateString('ko-KR') + ' ' + date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+          };
+
+          const infoWindow = new google.maps.InfoWindow({
+            content: `
+              <div style="max-width: 250px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+                <h3 style="margin: 0 0 8px 0; font-weight: bold; color: #f59e0b; font-size: 16px;">❓ 실종 - ${person.name}</h3>
+                <p style="margin: 0 0 4px 0; font-size: 14px;"><strong>나이:</strong> ${person.age}세 (${person.gender === 'male' ? '남성' : '여성'})</p>
+                <p style="margin: 0 0 4px 0; font-size: 14px;"><strong>마지막 위치:</strong> ${person.lastLocation}</p>
+                <p style="margin: 0 0 4px 0; font-size: 14px;"><strong>실종 시간:</strong> ${formatTime(person.lastSeenTime)}</p>
+                ${person.description ? `<p style="margin: 0; font-size: 14px; color: #666;"><strong>특징:</strong> ${person.description}</p>` : ''}
+                <div style="margin-top: 8px; padding: 6px; background: #fef3c7; border-radius: 4px; font-size: 12px; color: #92400e;">
+                  <strong>목격 시 즉시 112 신고</strong>
+                </div>
+              </div>
+            `
+          });
+
+          marker.addListener('click', () => {
+            infoWindow.open(map, marker);
+          });
+
+          newMarkers.push(marker);
+        }
+      });
+    }
+
     setMarkers(newMarkers);
-  }, [map, incidents, missingPersons]);
+  }, [map, incidents, missingPersons, activeFilter]);
 
   if (!apiKey) {
     return (
@@ -262,29 +315,66 @@ const GoogleMapView = ({ incidents, missingPersons = [], currentPosition }: Goog
       <div ref={mapRef} className="w-full h-full" />
       
       {/* 범례 */}
-      <div className="absolute bottom-4 left-4 bg-white rounded-lg shadow-lg p-3">
-        <h4 className="text-sm font-medium mb-2">위험도</h4>
-        <div className="space-y-1 text-xs">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-red-600"></div>
-            <span>매우 위험</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-orange-600"></div>
-            <span>위험</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-yellow-600"></div>
-            <span>주의</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-green-600"></div>
-            <span>안전</span>
+      <div className="absolute bottom-4 left-4 bg-white rounded-lg shadow-lg p-3 max-w-xs">
+        <h4 className="text-sm font-medium mb-2">범례</h4>
+        
+        {/* 위험도 */}
+        <div className="mb-3">
+          <h5 className="text-xs font-medium text-gray-600 mb-1">위험도</h5>
+          <div className="space-y-1 text-xs">
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-red-600"></div>
+              <span>매우 위험</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-orange-600"></div>
+              <span>위험</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-yellow-600"></div>
+              <span>주의</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-green-600"></div>
+              <span>안전</span>
+            </div>
           </div>
         </div>
         
-        <div className="mt-3 pt-2 border-t">
-          <h4 className="text-sm font-medium mb-1">위치 마커</h4>
+        {/* 사건 유형 */}
+        <div className="mb-3">
+          <h5 className="text-xs font-medium text-gray-600 mb-1">사건 유형</h5>
+          <div className="grid grid-cols-2 gap-1 text-xs">
+            <div className="flex items-center gap-1">
+              <span>🔪</span>
+              <span>범죄</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span>🚗</span>
+              <span>교통</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span>🔥</span>
+              <span>화재</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span>🌊</span>
+              <span>침수</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span>🚇</span>
+              <span>지하철</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span>🌪</span>
+              <span>재난</span>
+            </div>
+          </div>
+        </div>
+        
+        {/* 위치 마커 */}
+        <div>
+          <h5 className="text-xs font-medium text-gray-600 mb-1">내 위치</h5>
           <div className="space-y-1 text-xs">
             <div className="flex items-center gap-2">
               <span>🏠</span>
@@ -295,7 +385,7 @@ const GoogleMapView = ({ incidents, missingPersons = [], currentPosition }: Goog
               <span>관심 지역</span>
             </div>
             <div className="flex items-center gap-2">
-              <span>❓🧒</span>
+              <span>❓</span>
               <span>실종자</span>
             </div>
           </div>
@@ -303,7 +393,7 @@ const GoogleMapView = ({ incidents, missingPersons = [], currentPosition }: Goog
       </div>
 
       {/* 제보 집중 지역 표시 */}
-      <div className="absolute top-4 right-4 bg-white rounded-lg shadow-lg p-3">
+      <div className="absolute top-4 right-4 bg-white rounded-lg shadow-lg p-3 max-w-xs">
         <h4 className="text-sm font-medium mb-2 text-red-600">📍 제보 집중 지역</h4>
         <div className="space-y-1 text-xs">
           <div className="flex justify-between gap-4">
@@ -320,6 +410,21 @@ const GoogleMapView = ({ incidents, missingPersons = [], currentPosition }: Goog
           </div>
         </div>
       </div>
+
+      {/* 현재 필터 표시 */}
+      {activeFilter !== 'all' && (
+        <div className="absolute top-4 left-4 bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-medium">
+          <Filter className="w-4 h-4 inline mr-1" />
+          {activeFilter === 'crime' && '🔪 범죄'}
+          {activeFilter === 'traffic' && '🚗 교통'}
+          {activeFilter === 'fire' && '🔥 화재'}
+          {activeFilter === 'flood' && '🌊 침수'}
+          {activeFilter === 'subway' && '🚇 지하철'}
+          {activeFilter === 'disaster' && '🌪 재난'}
+          {activeFilter === 'missing' && '❓ 실종'}
+          {activeFilter === 'other' && '⚠️ 기타'}
+        </div>
+      )}
     </div>
   );
 };

@@ -184,17 +184,17 @@ const Index = () => {
         </div>
       </div>
 
-      {/* Map/List Toggle */}
-      <Tabs defaultValue="map" className="w-full">
+      {/* List/Map Toggle - 리스트가 기본 */}
+      <Tabs defaultValue="list" className="w-full">
         <div className="bg-white px-4 py-2 border-b">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="map" className="flex items-center gap-2">
-              <Map className="w-4 h-4" />
-              지도
-            </TabsTrigger>
             <TabsTrigger value="list" className="flex items-center gap-2">
               <List className="w-4 h-4" />
               리스트
+            </TabsTrigger>
+            <TabsTrigger value="map" className="flex items-center gap-2">
+              <Map className="w-4 h-4" />
+              지도
             </TabsTrigger>
           </TabsList>
         </div>
@@ -227,14 +227,6 @@ const Index = () => {
           </div>
         </div>
 
-        <TabsContent value="map" className="h-[calc(100vh-200px)]">
-          <GoogleMapView 
-            incidents={filteredIncidents} 
-            missingPersons={mockMissingPersons}
-            currentPosition={currentPosition}
-          />
-        </TabsContent>
-
         <TabsContent value="list" className="p-4 space-y-3 pb-20">
           {filteredIncidents.length === 0 ? (
             <div className="text-center py-8">
@@ -246,6 +238,15 @@ const Index = () => {
               <IncidentCard key={incident.id} incident={incident} />
             ))
           )}
+        </TabsContent>
+
+        <TabsContent value="map" className="h-[calc(100vh-200px)]">
+          <GoogleMapView 
+            incidents={filteredIncidents} 
+            missingPersons={mockMissingPersons}
+            currentPosition={currentPosition}
+            activeFilter={filter}
+          />
         </TabsContent>
       </Tabs>
 
