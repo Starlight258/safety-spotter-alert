@@ -1,73 +1,98 @@
-# Welcome to your Lovable project
+# 🗺️ Safety Zone – 내 주변 위험을 한눈에
 
-## Project info
+📡 **Live Demo**: [https://sprightly-zuccutto-8e6bbe.netlify.app/](https://sprightly-zuccutto-8e6bbe.netlify.app/)
 
-**URL**: https://lovable.dev/projects/5b9907f6-ad5b-49b3-ad69-f61b84565804
+---
 
-## How can I edit this code?
+## 📘 서비스 개요
 
-There are several ways of editing your application.
+**Safety Zone**는 범죄, 침수, 화재, 실종, 교통사고 등  
+**주변에서 발생하는 위험 사건들을 이모티콘으로 지도 위에 표시**해주는  
+위치 기반 실시간 안전 알림 MVP 서비스입니다.
 
-**Use Lovable**
+뉴스, 재난 문자, 커뮤니티 글을 일일이 확인하지 않아도  
+**한 화면에서 내가 사는 곳과 자주 가는 동네의 위험 상황을 빠르게 확인**할 수 있습니다.
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/5b9907f6-ad5b-49b3-ad69-f61b84565804) and start prompting.
+---
 
-Changes made via Lovable will be committed automatically to this repo.
+## ⚙️ 주요 기능
 
-**Use your preferred IDE**
+| 기능 | 설명 |
+|------|------|
+| 🗺️ **지도 기반 시각화** | 현재 위치 중심으로 지도를 자동 확대 |
+| 🏠 **내 집 & 관심 동네 설정** | 사용자 지정 위치를 동그라미로 지도에 표시 |
+| 🧩 **사건 사고 이모티콘 표시** | 주변 위험 유형에 따라 🔥 🔪 🌊 🚧 등 아이콘 표시 |
+| 🧒 **실종 신고 데이터 포함** | 실종자는 ❓ 또는 🧒 이모티콘으로 지도에 함께 노출 |
+| 🪟 **사건 상세 팝업** | 이모티콘 클릭 시, 시간/장소/간단 설명 표시 |
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+---
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+## 🌟 사용자에게 주는 가치
 
-Follow these steps:
+| 가치 | 설명 |
+|------|------|
+| 🔍 **빠른 파악** | 지도로 내 주변 상황을 바로 확인 |
+| 🧠 **정보 선택성** | 내가 사는 곳, 관심 동네 중심으로만 정보 필터링 |
+| 👁️ **직관적 UI** | 텍스트 대신 이모티콘으로 사건 확인 (한눈에 이해) |
+| ⏱️ **시간 절약** | 뉴스, 맘카페, 재난문자 뒤질 필요 없이 한 화면 확인 |
+| 🧭 **불안 해소** | “뉴스에서 봤던 사건이 우리 동네일까?” → 지도에서 즉시 확인 |
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+---
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+## 👤 사용자 페르소나
 
-# Step 3: Install the necessary dependencies.
-npm i
+### 👩‍💼 이가은 (30세, 직장인, 서울 강동구 거주)
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+> “뉴스는 범위가 너무 넓고 딱히 필요 없는 정보가 많아요.  
+> 내가 사는 동네에만 집중된 정보가 필요해요.”
 
-**Edit a file directly in GitHub**
+- 침수 지역, 교통 통제 구간을 빨리 확인하고 싶음
+- 뉴스·재난문자는 실시간성이 떨어지고 번거롭다고 느낌
+- **“한눈에 위험을 보는 앱”이 있다면 매일 출퇴근 전에 확인할 것 같음**
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+---
 
-**Use GitHub Codespaces**
+### 🧍‍♂️ 김태윤 (25세, 대학생, 관악구 거주)
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+> “뉴스에서 강도 사건을 봤는데, 그게 우리 동네 근처라면?  
+> 바로 조심해야죠. 그런데 그런 정보가 한눈에 안 보여서 불편했어요.”
 
-## What technologies are used for this project?
+- 범죄 관련 뉴스에 민감하게 반응
+- 사건이 **“우리 동네 근처인지”를 빠르게 확인**하고 싶음
+- 뉴스·트위터·커뮤니티로는 한계가 있어서 더 명확한 위치 기반 정보 탐색 필요
+- **실시간성과 시각적 직관성**을 중요시함
 
-This project is built with:
+---
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## 💡 사용자 스토리
 
-## How can I deploy this project?
+- “내가 사는 동네 근처에 ❓ 이모티콘이 떠서 눌러보니 실종된 아이더라고요. 주변을 좀 더 유심히 보게 됐어요.”
+- “🔥 아이콘을 보고 화재가 났다는 걸 빠르게 알았고, 경로를 바로 변경했어요.”
+- “지하철 지연 알림보다 더 빠르게 확인할 수 있어서 출근 때 도움이 됐어요.”
+- “뉴스에선 ‘서울 모처에서 흉기 난동’이라고만 나왔는데, 지도로 보니 우리 학교에서 가까운 곳이라 소름 돋았어요.”
 
-Simply open [Lovable](https://lovable.dev/projects/5b9907f6-ad5b-49b3-ad69-f61b84565804) and click on Share -> Publish.
+---
 
-## Can I connect a custom domain to my Lovable project?
+## 🧪 개발 및 테스트 상태 (MVP)
 
-Yes, you can!
+- ✅ **지도 중심 구성**으로 내 위치 및 관심 지역 확대
+- ✅ 사건 사고, 실종 제보 등 더미 데이터 기반 시각화
+- ✅ 카테고리별 이모티콘 구분 및 팝업 UI 구성
+- ✅ 향후 기능 확장 계획 준비 중
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+---
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+## 🔮 향후 개발 방향
+
+| 기능 | 설명 |
+|------|------|
+| 🧠 Gemini 기반 행동 제안 | AI가 위험도 분석 후 대응 가이드 추천 |
+| 🔔 스마트 알림 | 동일 제보 30건 이상 발생 시 자동 알림 |
+| 🧾 제보 기능 | 사용자 직접 입력 기반 사건 추가 |
+| 🧭 리스크 존 요약 | "오늘의 집중 지역"을 모아서 보여주는 기능 |
+
+---
+
+> Safety Zone는 뉴스보다 빠르게,  
+> 맘카페보다 정확하게,  
+> 내 주변의 위험을 **한눈에 알려주는 지도형 알림 도구**입니다.
