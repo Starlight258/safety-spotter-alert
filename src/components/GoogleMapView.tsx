@@ -1,16 +1,18 @@
-
 import { useEffect, useRef, useState } from 'react';
 import { Loader } from '@googlemaps/js-api-loader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { MapPin, Home, Heart } from 'lucide-react';
 import type { Incident } from '@/types/incident';
+import type { MissingPerson } from '@/types/missing';
 
 interface GoogleMapViewProps {
   incidents: Incident[];
+  missingPersons?: MissingPerson[];
+  currentPosition?: { lat: number; lng: number } | null;
 }
 
-const GoogleMapView = ({ incidents }: GoogleMapViewProps) => {
+const GoogleMapView = ({ incidents, missingPersons = [], currentPosition }: GoogleMapViewProps) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [apiKey, setApiKey] = useState<string>('');
@@ -39,6 +41,10 @@ const GoogleMapView = ({ incidents }: GoogleMapViewProps) => {
       other: '⚠️'
     };
     return icons[type as keyof typeof icons] || '⚠️';
+  };
+
+  const getMissingIcon = (age: number) => {
+    return age < 18 ? '🧒' : '❓';
   };
 
   const createEmojiMarker = (position: google.maps.LatLngLiteral, emoji: string, title: string, color = '#4285f4') => {
@@ -110,9 +116,12 @@ const GoogleMapView = ({ incidents }: GoogleMapViewProps) => {
       try {
         const google = await loader.load();
         
+        // 현재 위치 또는 서울 중심으로 지도 초기화
+        const center = currentPosition || { lat: 37.5665, lng: 126.9780 };
+        
         const mapInstance = new google.maps.Map(mapRef.current, {
-          center: { lat: 37.5665, lng: 126.9780 }, // 서울 중심
-          zoom: 13,
+          center: center,
+          zoom: currentPosition ? 15 : 13, // 현재 위치가 있으면 더 확대
           mapTypeId: google.maps.MapTypeId.ROADMAP,
           styles: [
             {
@@ -130,21 +139,21 @@ const GoogleMapView = ({ incidents }: GoogleMapViewProps) => {
     };
 
     initMap();
-  }, [apiKey]);
+  }, [apiKey, currentPosition]);
 
   useEffect(() => {
-    if (!map || !incidents.length) return;
+    if (!map) return;
 
-    // 기존 사건 마커 제거
+    // 기존 사건/실종 마커 제거
     markers.forEach(marker => {
-      if (marker.getTitle()?.includes('사건')) {
+      if (marker.getTitle()?.includes('사건') || marker.getTitle()?.includes('실종')) {
         marker.setMap(null);
       }
     });
 
-    // 새 사건 마커 추가
     const newMarkers: google.maps.Marker[] = [];
     
+    // 사건 마커 추가
     incidents.forEach((incident) => {
       if (incident.coordinates) {
         const marker = new google.maps.Marker({
@@ -185,8 +194,55 @@ const GoogleMapView = ({ incidents }: GoogleMapViewProps) => {
       }
     });
 
-    setMarkers(prev => [...prev.filter(m => !m.getTitle()?.includes('사건')), ...newMarkers]);
-  }, [map, incidents]);
+    // 실종자 마커 추가
+    missingPersons.forEach((person) => {
+      if (person.coordinates) {
+        const marker = new google.maps.Marker({
+          position: { 
+            lat: person.coordinates.lat, 
+            lng: person.coordinates.lng 
+          },
+          map: map,
+          title: `실종: ${person.name}`,
+          icon: {
+            url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
+              <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="16" cy="16" r="14" fill="#f59e0b" stroke="white" stroke-width="2"/>
+                <text x="16" y="20" text-anchor="middle" font-size="12" fill="white">${getMissingIcon(person.age)}</text>
+              </svg>
+            `)}`,
+            scaledSize: new google.maps.Size(32, 32),
+            anchor: new google.maps.Point(16, 16)
+          }
+        });
+
+        const formatTime = (timeString: string) => {
+          const date = new Date(timeString);
+          return date.toLocaleDateString('ko-KR') + ' ' + date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+        };
+
+        const infoWindow = new google.maps.InfoWindow({
+          content: `
+            <div style="max-width: 250px;">
+              <h3 style="margin: 0 0 8px 0; font-weight: bold; color: #f59e0b;">실종 - ${person.name}</h3>
+              <p style="margin: 0 0 4px 0;"><strong>나이:</strong> ${person.age}세 (${person.gender === 'male' ? '남성' : '여성'})</p>
+              <p style="margin: 0 0 4px 0;"><strong>마지막 위치:</strong> ${person.lastLocation}</p>
+              <p style="margin: 0 0 4px 0;"><strong>실종 시간:</strong> ${formatTime(person.lastSeenTime)}</p>
+              ${person.description ? `<p style="margin: 0; font-size: 14px; color: #666;"><strong>특징:</strong> ${person.description}</p>` : ''}
+            </div>
+          `
+        });
+
+        marker.addListener('click', () => {
+          infoWindow.open(map, marker);
+        });
+
+        newMarkers.push(marker);
+      }
+    });
+
+    setMarkers(prev => [...prev.filter(m => !m.getTitle()?.includes('사건') && !m.getTitle()?.includes('실종')), ...newMarkers]);
+  }, [map, incidents, missingPersons]);
 
   if (!apiKey) {
     return (
@@ -313,6 +369,10 @@ const GoogleMapView = ({ incidents }: GoogleMapViewProps) => {
             <div className="flex items-center gap-2">
               <span>🏡</span>
               <span>관심 동네</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span>❓🧒</span>
+              <span>실종자</span>
             </div>
           </div>
         </div>

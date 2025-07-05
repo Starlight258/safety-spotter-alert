@@ -1,6 +1,5 @@
-
 import { useState, useEffect } from 'react';
-import { Plus, Map, List, AlertTriangle, Brain } from 'lucide-react';
+import { Plus, Map, List, AlertTriangle, Brain, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import IncidentCard from '@/components/IncidentCard';
@@ -10,6 +9,7 @@ import GoogleMapView from '@/components/GoogleMapView';
 import VerificationModal from '@/components/VerificationModal';
 import AISettings from '@/components/AISettings';
 import { mockIncidents } from '@/data/mockData';
+import { mockMissingPersons } from '@/data/missingData';
 import { initializeGemini, generateIncidentSummary } from '@/services/geminiService';
 import type { Incident } from '@/types/incident';
 
@@ -22,9 +22,30 @@ const Index = () => {
   const [showAISettings, setShowAISettings] = useState(false);
   const [aiSummary, setAiSummary] = useState<string>('');
   const [isAIReady, setIsAIReady] = useState(false);
+  const [currentPosition, setCurrentPosition] = useState<{ lat: number; lng: number } | null>(null);
 
   useEffect(() => {
     setIncidents(mockIncidents);
+    
+    // 현재 위치 가져오기
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setCurrentPosition({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          });
+        },
+        (error) => {
+          console.log('위치 정보를 가져올 수 없습니다:', error);
+          // 기본값으로 서울 중심 사용
+          setCurrentPosition({ lat: 37.5665, lng: 126.9780 });
+        }
+      );
+    } else {
+      // 기본값으로 서울 중심 사용
+      setCurrentPosition({ lat: 37.5665, lng: 126.9780 });
+    }
     
     // Gemini API 키 확인
     const savedApiKey = localStorage.getItem('gemini_api_key');
@@ -84,7 +105,7 @@ const Index = () => {
       <div className="bg-white shadow-sm border-b">
         <div className="px-4 py-3">
           <div className="flex items-center justify-between mb-3">
-            <h1 className="text-xl font-bold text-gray-900">SafeZone</h1>
+            <h1 className="text-xl font-bold text-gray-900">Safety Spotter</h1>
             <div className="flex items-center gap-2">
               <Button
                 variant="ghost"
@@ -132,16 +153,16 @@ const Index = () => {
       </div>
 
       {/* Map/List Toggle */}
-      <Tabs defaultValue="list" className="w-full">
+      <Tabs defaultValue="map" className="w-full">
         <div className="bg-white px-4 py-2 border-b">
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="list" className="flex items-center gap-2">
-              <List className="w-4 h-4" />
-              리스트
-            </TabsTrigger>
             <TabsTrigger value="map" className="flex items-center gap-2">
               <Map className="w-4 h-4" />
               지도
+            </TabsTrigger>
+            <TabsTrigger value="list" className="flex items-center gap-2">
+              <List className="w-4 h-4" />
+              리스트
             </TabsTrigger>
           </TabsList>
         </div>
@@ -156,7 +177,8 @@ const Index = () => {
               { key: 'fire', label: '🔥 화재', color: 'orange' },
               { key: 'flood', label: '🌊 침수', color: 'cyan' },
               { key: 'subway', label: '🚇 지하철', color: 'green' },
-              { key: 'disaster', label: '🌪 재난', color: 'purple' }
+              { key: 'disaster', label: '🌪 재난', color: 'purple' },
+              { key: 'missing', label: '❓ 실종', color: 'yellow' }
             ].map(tab => (
               <button
                 key={tab.key}
@@ -173,6 +195,14 @@ const Index = () => {
           </div>
         </div>
 
+        <TabsContent value="map" className="h-[calc(100vh-200px)]">
+          <GoogleMapView 
+            incidents={filteredIncidents} 
+            missingPersons={mockMissingPersons}
+            currentPosition={currentPosition}
+          />
+        </TabsContent>
+
         <TabsContent value="list" className="p-4 space-y-3 pb-20">
           {filteredIncidents.length === 0 ? (
             <div className="text-center py-8">
@@ -184,10 +214,6 @@ const Index = () => {
               <IncidentCard key={incident.id} incident={incident} />
             ))
           )}
-        </TabsContent>
-
-        <TabsContent value="map" className="h-[calc(100vh-200px)]">
-          <GoogleMapView incidents={filteredIncidents} />
         </TabsContent>
       </Tabs>
 
