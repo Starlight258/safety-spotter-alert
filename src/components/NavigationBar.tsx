@@ -1,19 +1,20 @@
 
-import { Home, FileText, Settings } from 'lucide-react';
+import { Home, FileText, Settings, BarChart3 } from 'lucide-react';
 
 interface NavigationBarProps {
-  currentPage: 'home' | 'report' | 'settings';
+  currentPage: 'home' | 'report' | 'settings' | 'stats';
 }
 
 const NavigationBar = ({ currentPage }: NavigationBarProps) => {
   const navItems = [
     { id: 'home', icon: Home, label: '홈', href: '/' },
     { id: 'report', icon: FileText, label: '제보', href: '/report' },
+    { id: 'stats', icon: BarChart3, label: '통계', href: '/stats' },
     { id: 'settings', icon: Settings, label: '설정', href: '/settings' }
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200">
+    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40">
       <div className="flex justify-around py-2">
         {navItems.map(item => {
           const Icon = item.icon;

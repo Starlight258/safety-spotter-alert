@@ -1,10 +1,11 @@
 
 import { useState } from 'react';
-import { ArrowLeft, MapPin, Camera, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, MapPin, Camera, AlertTriangle, Brain } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Card, CardContent } from '@/components/ui/card';
 import NavigationBar from '@/components/NavigationBar';
 
 const Report = () => {
@@ -17,7 +18,8 @@ const Report = () => {
     { id: 'crime', label: '범죄', icon: '🔪', color: 'bg-red-100 border-red-200 text-red-700' },
     { id: 'traffic', label: '교통사고', icon: '🚗', color: 'bg-blue-100 border-blue-200 text-blue-700' },
     { id: 'fire', label: '화재', icon: '🔥', color: 'bg-orange-100 border-orange-200 text-orange-700' },
-    { id: 'disaster', label: '재난', icon: '🌪', color: 'bg-purple-100 border-purple-200 text-purple-700' },
+    { id: 'flood', label: '침수', icon: '🌊', color: 'bg-cyan-100 border-cyan-200 text-cyan-700' },
+    { id: 'subway', label: '지하철 지연', icon: '🚇', color: 'bg-green-100 border-green-200 text-green-700' },
     { id: 'other', label: '기타', icon: '⚠️', color: 'bg-gray-100 border-gray-200 text-gray-700' }
   ];
 
@@ -132,6 +134,26 @@ const Report = () => {
           </Button>
         </div>
 
+        {/* AI 제안 */}
+        {selectedType && location && (
+          <Card className="bg-blue-50 border-blue-200">
+            <CardContent className="p-4">
+              <div className="flex items-start gap-2 mb-2">
+                <Brain className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                <h4 className="font-medium text-blue-800">AI 제보 도움말</h4>
+              </div>
+              <p className="text-sm text-blue-700">
+                {selectedType === 'flood' && '침수 제보 시 수위 정도와 통행 가능 여부를 함께 알려주시면 더욱 도움이 됩니다.'}
+                {selectedType === 'traffic' && '교통사고 제보 시 차량 수와 부상자 여부, 도로 통제 상황을 알려주세요.'}
+                {selectedType === 'subway' && '지하철 지연 시 예상 지연 시간과 대체 교통수단 정보를 포함해주세요.'}
+                {selectedType === 'crime' && '범죄 신고는 112에 먼저 신고한 후 제보해주시기 바랍니다.'}
+                {selectedType === 'fire' && '화재 신고는 119에 먼저 신고한 후 제보해주시기 바랍니다.'}
+                {!['flood', 'traffic', 'subway', 'crime', 'fire'].includes(selectedType) && '정확하고 구체적인 정보를 제공해주시면 다른 시민들에게 큰 도움이 됩니다.'}
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
         {/* 주의사항 */}
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
           <div className="flex gap-3">
@@ -142,6 +164,7 @@ const Report = () => {
                 <li>• 허위 제보는 법적 처벌을 받을 수 있습니다</li>
                 <li>• 긴급 상황시에는 112, 119에 먼저 신고하세요</li>
                 <li>• 개인정보나 민감정보는 포함하지 마세요</li>
+                <li>• 30건 이상 제보 시 자동으로 알림이 발송됩니다</li>
               </ul>
             </div>
           </div>
