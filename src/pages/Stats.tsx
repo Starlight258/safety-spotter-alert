@@ -1,6 +1,5 @@
-
 import { useState } from 'react';
-import { BarChart3, TrendingUp, MapPin, Award, Calendar } from 'lucide-react';
+import { BarChart3, TrendingUp, MapPin, Award, Calendar, Smartphone } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import NavigationBar from '@/components/NavigationBar';
@@ -42,6 +41,7 @@ const Stats = () => {
             <BarChart3 className="w-5 h-5" />
             통계 & 리포트
           </h1>
+          <p className="text-sm text-gray-500 mt-1">내 활동과 지역 안전 현황</p>
         </div>
       </div>
 
@@ -117,12 +117,12 @@ const Stats = () => {
           </CardContent>
         </Card>
 
-        {/* 오늘의 핫스팟 */}
+        {/* 제보 집중 지역 */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <MapPin className="w-5 h-5 text-orange-600" />
-              오늘의 핫스팟
+              제보 집중 지역
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -141,6 +141,14 @@ const Stats = () => {
                   <Badge className="bg-orange-100 text-orange-700">주의</Badge>
                 </div>
                 <p className="text-sm text-orange-600">신림-서울대입구 구간 15분 지연</p>
+              </div>
+
+              <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="font-medium text-yellow-800">🔪 강남역 일대</h4>
+                  <Badge className="bg-yellow-100 text-yellow-700">주의</Badge>
+                </div>
+                <p className="text-sm text-yellow-600">범죄 제보 23건, 야간 시간대 주의</p>
               </div>
             </div>
           </CardContent>
@@ -171,6 +179,36 @@ const Stats = () => {
               <div className="flex justify-between items-center">
                 <span className="text-sm">안전도 평가</span>
                 <Badge className="bg-yellow-100 text-yellow-700">보통</Badge>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 앱 사용 통계 */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Smartphone className="w-5 h-5 text-purple-600" />
+              앱 사용 통계
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-sm">총 사용 시간</span>
+                <span className="font-medium">24시간 32분</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm">가장 많이 본 지역</span>
+                <span className="font-medium">강남구 역삼동</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm">알림 수신</span>
+                <span className="font-medium">156건</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm">앱 설치일</span>
+                <span className="font-medium">2024.01.01</span>
               </div>
             </div>
           </CardContent>

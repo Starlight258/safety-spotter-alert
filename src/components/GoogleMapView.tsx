@@ -3,6 +3,7 @@ import { Loader } from '@googlemaps/js-api-loader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { MapPin, Home, Heart } from 'lucide-react';
+import { getLocationSettings } from '@/services/locationService';
 import type { Incident } from '@/types/incident';
 import type { MissingPerson } from '@/types/missing';
 
@@ -16,8 +17,6 @@ const GoogleMapView = ({ incidents, missingPersons = [], currentPosition }: Goog
   const mapRef = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [apiKey, setApiKey] = useState<string>('');
-  const [homeLocation, setHomeLocation] = useState<string>('');
-  const [favoriteLocations, setFavoriteLocations] = useState<string[]>(['']);
   const [markers, setMarkers] = useState<google.maps.Marker[]>([]);
 
   const getMarkerColor = (riskLevel: string) => {
@@ -65,42 +64,6 @@ const GoogleMapView = ({ incidents, missingPersons = [], currentPosition }: Goog
     });
   };
 
-  const geocodeAddress = async (address: string): Promise<google.maps.LatLngLiteral | null> => {
-    if (!map) return null;
-    
-    const geocoder = new google.maps.Geocoder();
-    try {
-      const result = await geocoder.geocode({ address: `${address}, 서울, 대한민국` });
-      if (result.results[0]) {
-        const location = result.results[0].geometry.location;
-        return { lat: location.lat(), lng: location.lng() };
-      }
-    } catch (error) {
-      console.error('주소 검색 실패:', error);
-    }
-    return null;
-  };
-
-  const addHomeMarker = async () => {
-    if (!homeLocation.trim() || !map) return;
-    
-    const position = await geocodeAddress(homeLocation);
-    if (position) {
-      const marker = createEmojiMarker(position, '🏠', '내 집', '#10b981');
-      setMarkers(prev => [...prev, marker]);
-    }
-  };
-
-  const addFavoriteMarker = async (location: string, index: number) => {
-    if (!location.trim() || !map) return;
-    
-    const position = await geocodeAddress(location);
-    if (position) {
-      const marker = createEmojiMarker(position, '🏡', `관심 동네 ${index + 1}`, '#8b5cf6');
-      setMarkers(prev => [...prev, marker]);
-    }
-  };
-
   useEffect(() => {
     if (!apiKey) return;
 
@@ -121,7 +84,7 @@ const GoogleMapView = ({ incidents, missingPersons = [], currentPosition }: Goog
         
         const mapInstance = new google.maps.Map(mapRef.current, {
           center: center,
-          zoom: currentPosition ? 15 : 13, // 현재 위치가 있으면 더 확대
+          zoom: currentPosition ? 15 : 13,
           mapTypeId: google.maps.MapTypeId.ROADMAP,
           styles: [
             {
@@ -144,14 +107,36 @@ const GoogleMapView = ({ incidents, missingPersons = [], currentPosition }: Goog
   useEffect(() => {
     if (!map) return;
 
-    // 기존 사건/실종 마커 제거
-    markers.forEach(marker => {
-      if (marker.getTitle()?.includes('사건') || marker.getTitle()?.includes('실종')) {
-        marker.setMap(null);
-      }
-    });
-
+    // 기존 마커 제거
+    markers.forEach(marker => marker.setMap(null));
     const newMarkers: google.maps.Marker[] = [];
+
+    // 저장된 위치들 표시
+    const locationSettings = getLocationSettings();
+    
+    // 내 집 마커
+    if (locationSettings.homeLocation && locationSettings.homeLocation.isActive) {
+      const homeMarker = createEmojiMarker(
+        locationSettings.homeLocation.coordinates,
+        '🏠',
+        `내 집: ${locationSettings.homeLocation.name}`,
+        '#10b981'
+      );
+      newMarkers.push(homeMarker);
+    }
+
+    // 관심 지역 마커
+    locationSettings.interestLocations
+      .filter(loc => loc.isActive)
+      .forEach((location, index) => {
+        const interestMarker = createEmojiMarker(
+          location.coordinates,
+          '🏡',
+          `관심 지역: ${location.name}`,
+          '#8b5cf6'
+        );
+        newMarkers.push(interestMarker);
+      });
     
     // 사건 마커 추가
     incidents.forEach((incident) => {
@@ -241,7 +226,7 @@ const GoogleMapView = ({ incidents, missingPersons = [], currentPosition }: Goog
       }
     });
 
-    setMarkers(prev => [...prev.filter(m => !m.getTitle()?.includes('사건') && !m.getTitle()?.includes('실종')), ...newMarkers]);
+    setMarkers(newMarkers);
   }, [map, incidents, missingPersons]);
 
   if (!apiKey) {
@@ -276,67 +261,6 @@ const GoogleMapView = ({ incidents, missingPersons = [], currentPosition }: Goog
     <div className="relative w-full h-full">
       <div ref={mapRef} className="w-full h-full" />
       
-      {/* 위치 설정 패널 */}
-      <div className="absolute top-4 left-4 bg-white rounded-lg shadow-lg p-3 max-w-xs">
-        <h4 className="text-sm font-medium mb-2 flex items-center gap-1">
-          <Home className="w-4 h-4" />
-          내 위치 설정
-        </h4>
-        <div className="space-y-2">
-          <div className="flex gap-2">
-            <Input
-              type="text"
-              placeholder="우리집 주소 (예: 강남구 역삼동)"
-              value={homeLocation}
-              onChange={(e) => setHomeLocation(e.target.value)}
-              className="text-xs"
-            />
-            <Button size="sm" onClick={addHomeMarker} disabled={!homeLocation.trim()}>
-              🏠
-            </Button>
-          </div>
-          
-          <div className="text-xs text-gray-500 mb-2 flex items-center gap-1">
-            <Heart className="w-3 h-3" />
-            관심 동네 (최대 3곳)
-          </div>
-          
-          {favoriteLocations.slice(0, 3).map((location, index) => (
-            <div key={index} className="flex gap-2">
-              <Input
-                type="text"
-                placeholder={`관심 동네 ${index + 1}`}
-                value={location}
-                onChange={(e) => {
-                  const newLocations = [...favoriteLocations];
-                  newLocations[index] = e.target.value;
-                  setFavoriteLocations(newLocations);
-                }}
-                className="text-xs"
-              />
-              <Button 
-                size="sm" 
-                onClick={() => addFavoriteMarker(location, index)}
-                disabled={!location.trim()}
-              >
-                🏡
-              </Button>
-            </div>
-          ))}
-          
-          {favoriteLocations.length < 3 && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setFavoriteLocations([...favoriteLocations, ''])}
-              className="w-full text-xs"
-            >
-              + 관심 동네 추가
-            </Button>
-          )}
-        </div>
-      </div>
-      
       {/* 범례 */}
       <div className="absolute bottom-4 left-4 bg-white rounded-lg shadow-lg p-3">
         <h4 className="text-sm font-medium mb-2">위험도</h4>
@@ -368,7 +292,7 @@ const GoogleMapView = ({ incidents, missingPersons = [], currentPosition }: Goog
             </div>
             <div className="flex items-center gap-2">
               <span>🏡</span>
-              <span>관심 동네</span>
+              <span>관심 지역</span>
             </div>
             <div className="flex items-center gap-2">
               <span>❓🧒</span>

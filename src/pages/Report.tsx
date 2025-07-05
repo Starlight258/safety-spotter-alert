@@ -1,6 +1,5 @@
-
 import { useState } from 'react';
-import { ArrowLeft, MapPin, Camera, AlertTriangle, Brain } from 'lucide-react';
+import { ArrowLeft, MapPin, Camera, AlertTriangle, Brain, Smartphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -22,6 +21,20 @@ const Report = () => {
     { id: 'subway', label: '지하철 지연', icon: '🚇', color: 'bg-green-100 border-green-200 text-green-700' },
     { id: 'other', label: '기타', icon: '⚠️', color: 'bg-gray-100 border-gray-200 text-gray-700' }
   ];
+
+  const getCurrentLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          // 실제로는 역지오코딩 API를 사용하여 주소로 변환
+          setLocation('현재 위치');
+        },
+        (error) => {
+          alert('현재 위치를 가져올 수 없습니다.');
+        }
+      );
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,7 +64,10 @@ const Report = () => {
           >
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <h1 className="text-lg font-bold text-gray-900">사건 제보하기</h1>
+          <div className="flex items-center gap-2">
+            <Smartphone className="w-5 h-5 text-red-600" />
+            <h1 className="text-lg font-bold text-gray-900">사건 제보하기</h1>
+          </div>
         </div>
       </div>
 
@@ -100,7 +116,9 @@ const Report = () => {
             variant="outline" 
             size="sm"
             className="mt-2 text-blue-600 border-blue-200"
+            onClick={getCurrentLocation}
           >
+            <MapPin className="w-4 h-4 mr-1" />
             현재 위치 사용
           </Button>
         </div>

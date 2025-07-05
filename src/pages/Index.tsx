@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Map, List, AlertTriangle, Brain, MapPin } from 'lucide-react';
+import { Plus, Map, List, AlertTriangle, Brain, MapPin, Smartphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import IncidentCard from '@/components/IncidentCard';
@@ -11,6 +11,7 @@ import AISettings from '@/components/AISettings';
 import { mockIncidents } from '@/data/mockData';
 import { mockMissingPersons } from '@/data/missingData';
 import { initializeGemini, generateIncidentSummary } from '@/services/geminiService';
+import { getLocationSettings } from '@/services/locationService';
 import type { Incident } from '@/types/incident';
 
 const Index = () => {
@@ -23,6 +24,7 @@ const Index = () => {
   const [aiSummary, setAiSummary] = useState<string>('');
   const [isAIReady, setIsAIReady] = useState(false);
   const [currentPosition, setCurrentPosition] = useState<{ lat: number; lng: number } | null>(null);
+  const [locationSettings, setLocationSettings] = useState(getLocationSettings());
 
   useEffect(() => {
     setIncidents(mockIncidents);
@@ -91,6 +93,10 @@ const Index = () => {
     setShowAISettings(false);
   };
 
+  const updateLocationSettings = () => {
+    setLocationSettings(getLocationSettings());
+  };
+
   if (showAISettings) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -105,7 +111,10 @@ const Index = () => {
       <div className="bg-white shadow-sm border-b">
         <div className="px-4 py-3">
           <div className="flex items-center justify-between mb-3">
-            <h1 className="text-xl font-bold text-gray-900">Safety Spotter</h1>
+            <div className="flex items-center gap-2">
+              <Smartphone className="w-6 h-6 text-red-600" />
+              <h1 className="text-xl font-bold text-gray-900">안전 스포터</h1>
+            </div>
             <div className="flex items-center gap-2">
               <Button
                 variant="ghost"
@@ -125,6 +134,29 @@ const Index = () => {
             selectedLocation={selectedLocation}
             onLocationChange={setSelectedLocation}
           />
+
+          {/* 저장된 위치 정보 표시 */}
+          {(locationSettings.homeLocation || locationSettings.interestLocations.length > 0) && (
+            <div className="mt-3 bg-green-50 border border-green-200 rounded-lg p-3">
+              <div className="flex items-start gap-2">
+                <MapPin className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-green-800 mb-1">📍 설정된 위치</p>
+                  <div className="text-sm text-green-700 space-y-1">
+                    {locationSettings.homeLocation && locationSettings.homeLocation.isActive && (
+                      <div>🏠 {locationSettings.homeLocation.name}</div>
+                    )}
+                    {locationSettings.interestLocations
+                      .filter(loc => loc.isActive)
+                      .map(loc => (
+                        <div key={loc.id}>🏡 {loc.name}</div>
+                      ))
+                    }
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* AI 요약 */}
           {isAIReady && aiSummary && (

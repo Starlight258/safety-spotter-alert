@@ -1,17 +1,12 @@
-
 import { useState } from 'react';
-import { MapPin, Bell, Shield, ChevronRight } from 'lucide-react';
+import { MapPin, Bell, Shield, ChevronRight, Smartphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import LocationManager from '@/components/LocationManager';
 import NavigationBar from '@/components/NavigationBar';
 
 const Settings = () => {
-  const [locations, setLocations] = useState([
-    { id: 1, name: '현재 위치', active: true },
-    { id: 2, name: '강남구 역삼동', active: true }
-  ]);
-  
   const [notifications, setNotifications] = useState({
     news: true,
     reports: false,
@@ -33,41 +28,27 @@ const Settings = () => {
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="px-4 py-3">
-          <h1 className="text-lg font-bold text-gray-900">설정</h1>
+          <h1 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+            <Smartphone className="w-5 h-5 text-red-600" />
+            안전 스포터 설정
+          </h1>
+          <p className="text-sm text-gray-500 mt-1">안드로이드 앱 버전 1.0.0</p>
         </div>
       </div>
 
       <div className="space-y-6">
-        {/* 관심 지역 설정 */}
+        {/* 위치 설정 */}
         <div className="bg-white">
           <div className="px-4 py-3 border-b">
             <h2 className="font-semibold text-gray-900 flex items-center gap-2">
               <MapPin className="w-5 h-5 text-gray-600" />
-              관심 지역 설정
+              위치 설정
             </h2>
-            <p className="text-sm text-gray-500 mt-1">최대 3곳까지 설정 가능합니다</p>
+            <p className="text-sm text-gray-500 mt-1">내 집과 관심 지역을 설정하여 지도에서 확인하세요</p>
           </div>
           
-          <div className="p-4 space-y-3">
-            {locations.map(location => (
-              <div key={location.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <span className="font-medium">{location.name}</span>
-                <Switch 
-                  checked={location.active}
-                  onCheckedChange={(checked) => {
-                    setLocations(prev => prev.map(loc => 
-                      loc.id === location.id ? { ...loc, active: checked } : loc
-                    ));
-                  }}
-                />
-              </div>
-            ))}
-            
-            {locations.length < 3 && (
-              <Button variant="outline" className="w-full">
-                + 지역 추가하기
-              </Button>
-            )}
+          <div className="p-4">
+            <LocationManager />
           </div>
         </div>
 
@@ -76,7 +57,7 @@ const Settings = () => {
           <div className="px-4 py-3 border-b">
             <h2 className="font-semibold text-gray-900 flex items-center gap-2">
               <Bell className="w-5 h-5 text-gray-600" />
-              알림 설정
+              푸시 알림 설정
             </h2>
           </div>
           
@@ -135,12 +116,12 @@ const Settings = () => {
           </div>
         </div>
 
-        {/* 기타 설정 */}
+        {/* 앱 정보 */}
         <div className="bg-white">
           <div className="px-4 py-3 border-b">
             <h2 className="font-semibold text-gray-900 flex items-center gap-2">
               <Shield className="w-5 h-5 text-gray-600" />
-              기타
+              앱 정보
             </h2>
           </div>
           
@@ -149,13 +130,23 @@ const Settings = () => {
               '개인정보 처리방침',
               '서비스 이용약관',
               '제보 가이드라인',
-              '문의하기'
+              '앱 업데이트',
+              '문의하기',
+              '앱 평가하기'
             ].map(item => (
               <button key={item} className="w-full flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg">
                 <span className="font-medium">{item}</span>
                 <ChevronRight className="w-5 h-5 text-gray-400" />
               </button>
             ))}
+          </div>
+        </div>
+
+        {/* 앱 버전 정보 */}
+        <div className="bg-white">
+          <div className="p-4 text-center text-sm text-gray-500">
+            <p>안전 스포터 v1.0.0</p>
+            <p>© 2024 Safety Spotter. All rights reserved.</p>
           </div>
         </div>
       </div>
