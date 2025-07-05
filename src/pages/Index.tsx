@@ -25,6 +25,7 @@ const Index = () => {
   const [isAIReady, setIsAIReady] = useState(false);
   const [currentPosition, setCurrentPosition] = useState<{ lat: number; lng: number } | null>(null);
   const [locationSettings, setLocationSettings] = useState(getLocationSettings());
+  const [mapSelectedLocation, setMapSelectedLocation] = useState<{ lat: number; lng: number; name: string } | null>(null);
 
   useEffect(() => {
     setIncidents(mockIncidents);
@@ -76,9 +77,42 @@ const Index = () => {
     }
   }, [isAIReady, incidents]);
 
-  const filteredIncidents = incidents.filter(incident => 
-    filter === 'all' || incident.type === filter
-  );
+  // 거리 계산 함수 (km)
+  const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
+    const R = 6371; // 지구 반지름 (km)
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLng/2) * Math.sin(dLng/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  };
+
+  // 필터링된 사건 목록
+  const getFilteredIncidents = () => {
+    let filtered = filter === 'all' 
+      ? incidents 
+      : incidents.filter(incident => incident.type === filter);
+
+    // 지도에서 위치를 선택했으면 반경 2km 내 사건만 표시
+    if (mapSelectedLocation) {
+      filtered = filtered.filter(incident => {
+        if (!incident.coordinates) return false;
+        const distance = calculateDistance(
+          mapSelectedLocation.lat, 
+          mapSelectedLocation.lng,
+          incident.coordinates.lat,
+          incident.coordinates.lng
+        );
+        return distance <= 2; // 2km 이내
+      });
+    }
+
+    return filtered;
+  };
+
+  const filteredIncidents = getFilteredIncidents();
 
   const handleVerification = (response: 'confirmed' | 'denied' | 'unsure') => {
     if (selectedIncident) {
@@ -95,6 +129,10 @@ const Index = () => {
 
   const updateLocationSettings = () => {
     setLocationSettings(getLocationSettings());
+  };
+
+  const handleMapLocationSelect = (location: { lat: number; lng: number; name: string } | null) => {
+    setMapSelectedLocation(location);
   };
 
   if (showAISettings) {
@@ -134,6 +172,22 @@ const Index = () => {
             selectedLocation={selectedLocation}
             onLocationChange={setSelectedLocation}
           />
+
+          {/* 지도에서 선택된 위치 표시 */}
+          {mapSelectedLocation && (
+            <div className="mt-3 bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <div className="flex items-start gap-2">
+                <MapPin className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-blue-800 mb-1">🎯 선택된 위치</p>
+                  <p className="text-sm text-blue-700">반경 2km 내 사건 {filteredIncidents.length}건 표시 중</p>
+                  <p className="text-xs text-blue-600 mt-1">
+                    위도: {mapSelectedLocation.lat.toFixed(4)}, 경도: {mapSelectedLocation.lng.toFixed(4)}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* 저장된 위치 정보 표시 */}
           {(locationSettings.homeLocation || locationSettings.interestLocations.length > 0) && (
@@ -231,21 +285,38 @@ const Index = () => {
           {filteredIncidents.length === 0 ? (
             <div className="text-center py-8">
               <div className="text-gray-400 text-lg mb-2">📍</div>
-              <p className="text-gray-500">현재 지역에 신고된 사건이 없습니다</p>
+              {mapSelectedLocation ? (
+                <div>
+                  <p className="text-gray-500 mb-2">선택된 위치 반경 2km 내에</p>
+                  <p className="text-gray-500">해당 유형의 사건이 없습니다</p>
+                </div>
+              ) : (
+                <p className="text-gray-500">현재 지역에 신고된 사건이 없습니다</p>
+              )}
             </div>
           ) : (
-            filteredIncidents.map(incident => (
-              <IncidentCard key={incident.id} incident={incident} />
-            ))
+            <>
+              {mapSelectedLocation && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                  <p className="text-sm text-blue-700">
+                    📍 선택된 위치 반경 2km 내 사건 <strong>{filteredIncidents.length}건</strong>
+                  </p>
+                </div>
+              )}
+              {filteredIncidents.map(incident => (
+                <IncidentCard key={incident.id} incident={incident} />
+              ))}
+            </>
           )}
         </TabsContent>
 
         <TabsContent value="map" className="h-[calc(100vh-200px)]">
           <GoogleMapView 
-            incidents={filteredIncidents} 
+            incidents={incidents} 
             missingPersons={mockMissingPersons}
             currentPosition={currentPosition}
             activeFilter={filter}
+            onLocationSelect={handleMapLocationSelect}
           />
         </TabsContent>
       </Tabs>

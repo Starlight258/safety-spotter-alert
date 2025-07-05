@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Loader } from '@googlemaps/js-api-loader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { MapPin, Home, Heart, Filter } from 'lucide-react';
+import { MapPin, Home, Heart, Filter, Navigation } from 'lucide-react';
 import { getLocationSettings } from '@/services/locationService';
 import type { Incident } from '@/types/incident';
 import type { MissingPerson } from '@/types/missing';
@@ -12,13 +12,16 @@ interface GoogleMapViewProps {
   missingPersons?: MissingPerson[];
   currentPosition?: { lat: number; lng: number } | null;
   activeFilter?: string;
+  onLocationSelect?: (location: { lat: number; lng: number; name: string }) => void;
 }
 
-const GoogleMapView = ({ incidents, missingPersons = [], currentPosition, activeFilter = 'all' }: GoogleMapViewProps) => {
+const GoogleMapView = ({ incidents, missingPersons = [], currentPosition, activeFilter = 'all', onLocationSelect }: GoogleMapViewProps) => {
   const mapRef = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [apiKey, setApiKey] = useState<string>('');
   const [markers, setMarkers] = useState<google.maps.Marker[]>([]);
+  const [selectedLocation, setSelectedLocation] = useState<{ lat: number; lng: number; name: string } | null>(null);
+  const [locationCircle, setLocationCircle] = useState<google.maps.Circle | null>(null);
 
   const getMarkerColor = (riskLevel: string) => {
     switch (riskLevel) {
@@ -78,6 +81,52 @@ const GoogleMapView = ({ incidents, missingPersons = [], currentPosition, active
     });
   };
 
+  // 거리 계산 함수 (km)
+  const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
+    const R = 6371; // 지구 반지름 (km)
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLng/2) * Math.sin(dLng/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  };
+
+  // 지도 클릭 이벤트 처리
+  const handleMapClick = (event: google.maps.MapMouseEvent) => {
+    if (event.latLng) {
+      const lat = event.latLng.lat();
+      const lng = event.latLng.lng();
+      const location = { lat, lng, name: `선택된 위치 (${lat.toFixed(4)}, ${lng.toFixed(4)})` };
+      
+      setSelectedLocation(location);
+      onLocationSelect?.(location);
+
+      // 기존 원 제거
+      if (locationCircle) {
+        locationCircle.setMap(null);
+      }
+
+      // 새 원 생성 (반경 2km)
+      const circle = new google.maps.Circle({
+        strokeColor: '#3b82f6',
+        strokeOpacity: 0.8,
+        strokeWeight: 2,
+        fillColor: '#3b82f6',
+        fillOpacity: 0.15,
+        map: map,
+        center: { lat, lng },
+        radius: 2000, // 2km
+      });
+
+      setLocationCircle(circle);
+
+      // 지도 중심을 선택된 위치로 이동
+      map?.panTo({ lat, lng });
+    }
+  };
+
   useEffect(() => {
     if (!apiKey) return;
 
@@ -98,7 +147,7 @@ const GoogleMapView = ({ incidents, missingPersons = [], currentPosition, active
         
         const mapInstance = new google.maps.Map(mapRef.current, {
           center: center,
-          zoom: currentPosition ? 16 : 13, // 현재 위치가 있으면 더 확대
+          zoom: currentPosition ? 16 : 13,
           mapTypeId: google.maps.MapTypeId.ROADMAP,
           styles: [
             {
@@ -108,6 +157,9 @@ const GoogleMapView = ({ incidents, missingPersons = [], currentPosition, active
             }
           ]
         });
+
+        // 지도 클릭 이벤트 추가
+        mapInstance.addListener('click', handleMapClick);
 
         setMap(mapInstance);
       } catch (error) {
@@ -153,9 +205,23 @@ const GoogleMapView = ({ incidents, missingPersons = [], currentPosition, active
       });
 
     // 필터링된 사건 마커 추가
-    const filteredIncidents = activeFilter === 'all' 
+    let filteredIncidents = activeFilter === 'all' 
       ? incidents 
       : incidents.filter(incident => incident.type === activeFilter);
+
+    // 선택된 위치가 있으면 반경 2km 내 사건만 표시
+    if (selectedLocation) {
+      filteredIncidents = filteredIncidents.filter(incident => {
+        if (!incident.coordinates) return false;
+        const distance = calculateDistance(
+          selectedLocation.lat, 
+          selectedLocation.lng,
+          incident.coordinates.lat,
+          incident.coordinates.lng
+        );
+        return distance <= 2; // 2km 이내
+      });
+    }
     
     filteredIncidents.forEach((incident) => {
       if (incident.coordinates) {
@@ -229,7 +295,23 @@ const GoogleMapView = ({ incidents, missingPersons = [], currentPosition, active
 
     // 실종자 마커 추가 (필터가 'missing' 또는 'all'일 때만)
     if (activeFilter === 'all' || activeFilter === 'missing') {
-      missingPersons.forEach((person) => {
+      let filteredMissingPersons = missingPersons;
+
+      // 선택된 위치가 있으면 반경 2km 내 실종자만 표시
+      if (selectedLocation) {
+        filteredMissingPersons = missingPersons.filter(person => {
+          if (!person.coordinates) return false;
+          const distance = calculateDistance(
+            selectedLocation.lat, 
+            selectedLocation.lng,
+            person.coordinates.lat,
+            person.coordinates.lng
+          );
+          return distance <= 2; // 2km 이내
+        });
+      }
+
+      filteredMissingPersons.forEach((person) => {
         if (person.coordinates) {
           const marker = new google.maps.Marker({
             position: { 
@@ -280,7 +362,16 @@ const GoogleMapView = ({ incidents, missingPersons = [], currentPosition, active
     }
 
     setMarkers(newMarkers);
-  }, [map, incidents, missingPersons, activeFilter]);
+  }, [map, incidents, missingPersons, activeFilter, selectedLocation]);
+
+  const clearLocationSelection = () => {
+    setSelectedLocation(null);
+    if (locationCircle) {
+      locationCircle.setMap(null);
+      setLocationCircle(null);
+    }
+    onLocationSelect?.(null);
+  };
 
   if (!apiKey) {
     return (
@@ -313,6 +404,36 @@ const GoogleMapView = ({ incidents, missingPersons = [], currentPosition, active
   return (
     <div className="relative w-full h-full">
       <div ref={mapRef} className="w-full h-full" />
+      
+      {/* 위치 선택 안내 */}
+      {!selectedLocation && (
+        <div className="absolute top-4 left-4 bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-medium shadow-lg">
+          <Navigation className="w-4 h-4 inline mr-1" />
+          지도를 클릭하여 위치를 선택하세요
+        </div>
+      )}
+
+      {/* 선택된 위치 정보 */}
+      {selectedLocation && (
+        <div className="absolute top-4 left-4 bg-white rounded-lg shadow-lg p-3 max-w-xs">
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="text-sm font-medium text-blue-600">📍 선택된 위치</h4>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={clearLocationSelection}
+              className="text-gray-500 hover:text-gray-700 p-1 h-auto"
+            >
+              ✕
+            </Button>
+          </div>
+          <p className="text-xs text-gray-600">반경 2km 내 사건만 표시</p>
+          <p className="text-xs text-blue-600 mt-1">
+            위도: {selectedLocation.lat.toFixed(4)}<br/>
+            경도: {selectedLocation.lng.toFixed(4)}
+          </p>
+        </div>
+      )}
       
       {/* 범례 */}
       <div className="absolute bottom-4 left-4 bg-white rounded-lg shadow-lg p-3 max-w-xs">
@@ -413,7 +534,7 @@ const GoogleMapView = ({ incidents, missingPersons = [], currentPosition, active
 
       {/* 현재 필터 표시 */}
       {activeFilter !== 'all' && (
-        <div className="absolute top-4 left-4 bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-medium">
+        <div className="absolute top-16 left-4 bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-medium">
           <Filter className="w-4 h-4 inline mr-1" />
           {activeFilter === 'crime' && '🔪 범죄'}
           {activeFilter === 'traffic' && '🚗 교통'}
