@@ -48,7 +48,7 @@ const GoogleMapView = ({ incidents }: GoogleMapViewProps) => {
       });
 
       try {
-        await loader.load();
+        const google = await loader.load();
         
         const mapInstance = new google.maps.Map(mapRef.current, {
           center: { lat: 37.5665, lng: 126.9780 }, // 서울 중심
