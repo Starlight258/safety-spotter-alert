@@ -1,14 +1,16 @@
 
 import { useState, useEffect } from 'react';
-import { Plus, Map, List, AlertTriangle } from 'lucide-react';
+import { Plus, Map, List, AlertTriangle, Brain } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import IncidentCard from '@/components/IncidentCard';
 import LocationSelector from '@/components/LocationSelector';
 import NavigationBar from '@/components/NavigationBar';
-import MapView from '@/components/MapView';
+import GoogleMapView from '@/components/GoogleMapView';
 import VerificationModal from '@/components/VerificationModal';
+import AISettings from '@/components/AISettings';
 import { mockIncidents } from '@/data/mockData';
+import { initializeGemini, generateIncidentSummary } from '@/services/geminiService';
 import type { Incident } from '@/types/incident';
 
 const Index = () => {
@@ -17,9 +19,19 @@ const Index = () => {
   const [filter, setFilter] = useState<string>('all');
   const [showVerificationModal, setShowVerificationModal] = useState(false);
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
+  const [showAISettings, setShowAISettings] = useState(false);
+  const [aiSummary, setAiSummary] = useState<string>('');
+  const [isAIReady, setIsAIReady] = useState(false);
 
   useEffect(() => {
     setIncidents(mockIncidents);
+    
+    // Gemini API 키 확인
+    const savedApiKey = localStorage.getItem('gemini_api_key');
+    if (savedApiKey) {
+      initializeGemini(savedApiKey);
+      setIsAIReady(true);
+    }
     
     // 시뮬레이션: 5초 후 검증 요청 팝업
     const timer = setTimeout(() => {
@@ -33,18 +45,38 @@ const Index = () => {
     return () => clearTimeout(timer);
   }, []);
 
+  useEffect(() => {
+    if (isAIReady && incidents.length > 0) {
+      generateIncidentSummary(incidents)
+        .then(summary => setAiSummary(summary))
+        .catch(err => console.error('AI 요약 생성 실패:', err));
+    }
+  }, [isAIReady, incidents]);
+
   const filteredIncidents = incidents.filter(incident => 
     filter === 'all' || incident.type === filter
   );
 
   const handleVerification = (response: 'confirmed' | 'denied' | 'unsure') => {
     if (selectedIncident) {
-      // 여기서 실제로는 서버에 검증 응답을 전송
       console.log(`Verified incident ${selectedIncident.id} as ${response}`);
     }
     setShowVerificationModal(false);
     setSelectedIncident(null);
   };
+
+  const handleAISettingsComplete = () => {
+    setIsAIReady(true);
+    setShowAISettings(false);
+  };
+
+  if (showAISettings) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <AISettings onApiKeySet={handleAISettingsComplete} />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -54,6 +86,15 @@ const Index = () => {
           <div className="flex items-center justify-between mb-3">
             <h1 className="text-xl font-bold text-gray-900">SafeZone</h1>
             <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowAISettings(true)}
+                className="text-blue-600"
+              >
+                <Brain className="w-4 h-4 mr-1" />
+                AI
+              </Button>
               <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
               <span className="text-sm text-red-600 font-medium">실시간</span>
             </div>
@@ -63,6 +104,19 @@ const Index = () => {
             selectedLocation={selectedLocation}
             onLocationChange={setSelectedLocation}
           />
+
+          {/* AI 요약 */}
+          {isAIReady && aiSummary && (
+            <div className="mt-3 bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <div className="flex items-start gap-2">
+                <Brain className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-blue-800 mb-1">AI 상황 요약</p>
+                  <p className="text-sm text-blue-700">{aiSummary}</p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -122,7 +176,7 @@ const Index = () => {
         </TabsContent>
 
         <TabsContent value="map" className="h-[calc(100vh-200px)]">
-          <MapView incidents={filteredIncidents} />
+          <GoogleMapView incidents={filteredIncidents} />
         </TabsContent>
       </Tabs>
 

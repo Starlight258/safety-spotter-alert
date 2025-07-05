@@ -1,7 +1,9 @@
-
 import { Clock, MapPin, Users, Shield, AlertTriangle, Brain } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { useState, useEffect } from 'react';
+import { analyzeIncidentRisk } from '@/services/geminiService';
 import type { Incident } from '@/types/incident';
 
 interface IncidentCardProps {
@@ -9,6 +11,9 @@ interface IncidentCardProps {
 }
 
 const IncidentCard = ({ incident }: IncidentCardProps) => {
+  const [aiSuggestion, setAiSuggestion] = useState<string>(incident.aiSuggestion || '');
+  const [isLoadingAI, setIsLoadingAI] = useState(false);
+
   const getTypeConfig = (type: string) => {
     const configs = {
       crime: { icon: '🔪', color: 'bg-red-50 border-red-200', textColor: 'text-red-700' },
@@ -45,6 +50,21 @@ const IncidentCard = ({ incident }: IncidentCardProps) => {
   const sourceConfig = getSourceConfig(incident.source);
   const riskConfig = getRiskBadge(incident.riskLevel);
   const timeAgo = getTimeAgo(incident.timestamp);
+
+  const generateAISuggestion = async () => {
+    const geminiKey = localStorage.getItem('gemini_api_key');
+    if (!geminiKey) return;
+
+    setIsLoadingAI(true);
+    try {
+      const suggestion = await analyzeIncidentRisk(incident);
+      setAiSuggestion(suggestion);
+    } catch (error) {
+      console.error('AI 제안 생성 실패:', error);
+    } finally {
+      setIsLoadingAI(false);
+    }
+  };
 
   return (
     <Card className={`border-2 ${typeConfig.color} shadow-sm`}>
@@ -85,15 +105,28 @@ const IncidentCard = ({ incident }: IncidentCardProps) => {
         </p>
 
         {/* AI Suggestion */}
-        {incident.aiSuggestion && (
+        {aiSuggestion ? (
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
             <div className="flex items-start gap-2">
               <Brain className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
-              <div>
+              <div className="flex-1">
                 <p className="text-sm font-medium text-blue-800 mb-1">AI 행동 제안</p>
-                <p className="text-sm text-blue-700">{incident.aiSuggestion}</p>
+                <p className="text-sm text-blue-700">{aiSuggestion}</p>
               </div>
             </div>
+          </div>
+        ) : localStorage.getItem('gemini_api_key') && (
+          <div className="mb-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={generateAISuggestion}
+              disabled={isLoadingAI}
+              className="text-blue-600 border-blue-200 hover:bg-blue-50"
+            >
+              <Brain className="w-4 h-4 mr-1" />
+              {isLoadingAI ? 'AI 분석 중...' : 'AI 제안 받기'}
+            </Button>
           </div>
         )}
 
