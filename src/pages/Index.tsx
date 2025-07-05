@@ -111,12 +111,23 @@ const Index = () => {
               <div className="flex items-start gap-2">
                 <Brain className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
                 <div>
-                  <p className="text-sm font-medium text-blue-800 mb-1">AI 상황 요약</p>
+                  <p className="text-sm font-medium text-blue-800 mb-1">🔮 AI 상황 요약</p>
                   <p className="text-sm text-blue-700">{aiSummary}</p>
                 </div>
               </div>
             </div>
           )}
+
+          {/* 제보 집중 지역 알림 */}
+          <div className="mt-3 bg-red-50 border border-red-200 rounded-lg p-3">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-red-800 mb-1">📍 제보 집중 지역</p>
+                <p className="text-sm text-red-700">강남역 일대에서 침수 제보 47건 발생 중 - 우회 권장</p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
