@@ -1,6 +1,6 @@
 # 🗺️ Safety Zone – 내 주변 위험을 한눈에
 
-📡 **Live Demo**: [https://sprightly-zuccutto-8e6bbe.netlify.app/](https://sprightly-zuccutto-8e6bbe.netlify.app/)
+📡 **Live Demo**: https://sprightly-zuccutto-8e6bbe.netlify.app/
 
 ---
 
